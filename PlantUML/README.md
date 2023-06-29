@@ -1,0 +1,1 @@
+PLANTUML necessita do JAVA >=8 e o graphviz
