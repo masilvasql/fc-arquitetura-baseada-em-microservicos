@@ -4,7 +4,10 @@ AddRelTag("async", $lineStyle = "dashed", $lineColor = "#2c3e50", $lineThickness
 title "Digital Wallet Full Cycle"
 Person(client, "Client", "Digital Wallet User")
 
+
 System_Ext(payment_gateway, "Paytment Gateway", "Payment Processor")
+
+
 
 System_Boundary(digital_wallet, "Digital Wallet"){
     Container(spa,"SPA", "React", "Digital Wallet Web App")
