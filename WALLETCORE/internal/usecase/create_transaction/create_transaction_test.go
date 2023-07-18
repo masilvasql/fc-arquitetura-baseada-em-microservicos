@@ -1,6 +1,8 @@
 package createtransaction
 
 import (
+	"github.com/masilvasql/fc-ms-wallet/internal/event"
+	"github.com/masilvasql/fc-ms-wallet/pkg/events"
 	"testing"
 
 	"github.com/masilvasql/fc-ms-wallet/internal/entity"
@@ -52,7 +54,9 @@ func TestCreateTransactiontUseCase_Execute(t *testing.T) {
 		AccountIdTo:   accountTo.ID,
 		Amount:        ammount,
 	}
-	uc := CreateNewTranasction(mTransaction, mAccount)
+	dispatcher := *events.NewEventDispatcher()
+	event := event.NewTrasactionCreated()
+	uc := CreateNewTranasction(mTransaction, mAccount, dispatcher, *event)
 
 	output, err := uc.Execute(input)
 
