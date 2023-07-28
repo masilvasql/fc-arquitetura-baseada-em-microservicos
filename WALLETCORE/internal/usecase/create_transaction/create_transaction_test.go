@@ -1,7 +1,9 @@
 package createtransaction
 
 import (
+	"context"
 	"github.com/masilvasql/fc-ms-wallet/internal/event"
+	"github.com/masilvasql/fc-ms-wallet/internal/usecase/mocks"
 	"github.com/masilvasql/fc-ms-wallet/pkg/events"
 	"testing"
 
@@ -10,61 +12,33 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-type AccountMock struct {
-	mock.Mock
-}
+func TestCreateTransactionUseCase_Execute(t *testing.T) {
+	client1, _ := entity.NewClient("client1", "j@j.com")
+	account1 := entity.NewAccount(client1)
+	account1.Credit(1000)
 
-func (m *AccountMock) FindById(id string) (*entity.Account, error) {
-	args := m.Called(id)
-	return args.Get(0).(*entity.Account), args.Error(1)
-}
+	client2, _ := entity.NewClient("client2", "j@j2.com")
+	account2 := entity.NewAccount(client2)
+	account2.Credit(1000)
 
-func (m *AccountMock) Save(account *entity.Account) error {
-	args := m.Called(account)
-	return args.Error(0)
-}
+	mockUow := &mocks.UowMock{}
+	mockUow.On("Do", mock.Anything, mock.Anything).Return(nil)
 
-type TransactionMock struct {
-	mock.Mock
-}
-
-func (m *TransactionMock) Create(transaction *entity.Transaction) error {
-	args := m.Called(transaction)
-	return args.Error(0)
-}
-
-func TestCreateTransactiontUseCase_Execute(t *testing.T) {
-	clientFrom, _ := entity.NewClient("John Doe", "john@teste.com")
-	accountFrom := entity.NewAccount(clientFrom)
-	accountFrom.Credit(200.0)
-
-	clientTo, _ := entity.NewClient("Pedro", "pedro@teste.com")
-	accountTo := entity.NewAccount(clientTo)
-	ammount := 100.0
-
-	mAccount := &AccountMock{}
-	mAccount.On("FindById", accountFrom.ID).Return(accountFrom, nil)
-	mAccount.On("FindById", accountTo.ID).Return(accountTo, nil)
-
-	mTransaction := &TransactionMock{}
-	mTransaction.On("Create", mock.Anything).Return(nil)
-
-	input := &CreateTransactionInputDTO{
-		AccountIdFrom: accountFrom.ID,
-		AccountIdTo:   accountTo.ID,
-		Amount:        ammount,
+	inputDto := CreateTransactionInputDTO{
+		AccountIDFrom: account1.ID,
+		AccountIDTo:   account2.ID,
+		Amount:        100,
 	}
-	dispatcher := *events.NewEventDispatcher()
-	event := event.NewTrasactionCreated()
-	uc := CreateNewTranasction(mTransaction, mAccount, dispatcher, *event)
 
-	output, err := uc.Execute(input)
+	dispatcher := events.NewEventDispatcher()
+	eventTransaction := event.NewTrasactionCreated()
+	eventBalance := event.NewBalanceUpdated()
+	ctx := context.Background()
 
+	uc := NewCreateTransactionUseCase(mockUow, dispatcher, eventTransaction, eventBalance)
+	output, err := uc.Execute(ctx, inputDto)
 	assert.Nil(t, err)
 	assert.NotNil(t, output)
-	mAccount.AssertExpectations(t)
-	mAccount.AssertNumberOfCalls(t, "FindById", 2)
-	mTransaction.AssertExpectations(t)
-	mTransaction.AssertNumberOfCalls(t, "Create", 1)
-
+	mockUow.AssertExpectations(t)
+	mockUow.AssertNumberOfCalls(t, "Do", 1)
 }

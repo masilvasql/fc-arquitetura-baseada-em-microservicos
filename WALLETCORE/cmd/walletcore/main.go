@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	_ "github.com/go-sql-driver/mysql"
@@ -12,6 +13,7 @@ import (
 	"github.com/masilvasql/fc-ms-wallet/internal/web"
 	"github.com/masilvasql/fc-ms-wallet/internal/web/webserver"
 	"github.com/masilvasql/fc-ms-wallet/pkg/events"
+	"github.com/masilvasql/fc-ms-wallet/pkg/uow"
 )
 
 func main() {
@@ -23,15 +25,29 @@ func main() {
 
 	eventDispatcher := events.NewEventDispatcher()
 	transactionCreatedEvent := event.NewTrasactionCreated()
+	balanceUpdatedEvent := event.NewBalanceUpdated()
 	//eventDispatcher.Register("TransactionCreated", handler)
 
 	clientDb := database.NewClientDB(db)
 	accountDb := database.NewAccountDB(db)
-	transactionDb := database.NewTransactionDB(db)
+
+	ctx := context.Background()
+	unitOfWork := uow.NewUow(ctx, db)
+	unitOfWork.Register("AccountDB", func(tx *sql.Tx) interface{} {
+		return database.NewAccountDB(db)
+	})
+
+	unitOfWork.Register("ClientDB", func(tx *sql.Tx) interface{} {
+		return database.NewClientDB(db)
+	})
+
+	unitOfWork.Register("TransactionDB", func(tx *sql.Tx) interface{} {
+		return database.NewTransactionDB(db)
+	})
 
 	createClientUseCase := createclient.NewCreateClientUseCase(clientDb)
 	createAccountUseCase := createaccount.NewCreateAccountUseCase(accountDb, clientDb)
-	creaTeTransactionUseCase := createtransaction.CreateNewTranasction(transactionDb, accountDb, eventDispatcher, transactionCreatedEvent)
+	creaTeTransactionUseCase := createtransaction.NewCreateTransactionUseCase(unitOfWork, eventDispatcher, transactionCreatedEvent, balanceUpdatedEvent)
 
 	webServer := webserver.NewWebServer(":3000")
 	clientHandler := web.NewWebClientHandler(*createClientUseCase)

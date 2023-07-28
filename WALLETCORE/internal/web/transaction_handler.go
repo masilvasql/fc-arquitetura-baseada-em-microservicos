@@ -24,7 +24,10 @@ func (h *WebTransactionHandler) CreateTransaction(w http.ResponseWriter, r *http
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	outputDTO, err := h.CreateTransactionUseCase.Execute(&dto)
+
+	ctx := r.Context()
+
+	outputDTO, err := h.CreateTransactionUseCase.Execute(ctx, dto)
 	if err != nil {
 		w.Write([]byte("Error2 reading body" + err.Error()))
 		w.WriteHeader(http.StatusInternalServerError)
